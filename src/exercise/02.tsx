@@ -80,7 +80,7 @@ function PokemonInfo({pokemonName}) {
   const {pokemon, status, error} = state
 
   if (status === 'idle' || !pokemonName) {
-    return 'Submit a pokemon'
+    return <div>Submit a pokemon</div>
   } else if (status === 'pending') {
     return <PokemonInfoFallback name={pokemonName} />
   } else if (status === 'rejected') {

@@ -58,7 +58,7 @@ function PokemonInfo({pokemonName}) {
   }, [cache, pokemonName, run, setData])
 
   if (status === 'idle') {
-    return 'Submit a pokemon'
+    return <span>'Submit a pokemon'</span>
   } else if (status === 'pending') {
     return <PokemonInfoFallback name={pokemonName} />
   } else if (status === 'rejected') {

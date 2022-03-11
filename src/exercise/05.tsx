@@ -1,14 +1,26 @@
-// useLayoutEffect: auto-scrolling textarea
-// http://localhost:3000/isolated/exercise/04.js
+// useImperativeHandle: scroll to top/bottom
+// http://localhost:3000/isolated/exercise/05.js
 
 import * as React from 'react'
 
+// 🐨 wrap this in a React.forwardRef and accept `ref` as the second argument
 function MessagesDisplay({messages}) {
   const containerRef = React.useRef()
-  // 🐨 replace useEffect with useLayoutEffect
-  React.useEffect(() => {
-    containerRef.current.scrollTop = containerRef.current.scrollHeight
+  React.useLayoutEffect(() => {
+    scrollToBottom()
   })
+
+  // 💰 you're gonna want this as part of your imperative methods
+  // function scrollToTop() {
+  //   containerRef.current.scrollTop = 0
+  // }
+  function scrollToBottom() {
+    // @ts-ignore
+    containerRef.current.scrollTop = containerRef.current.scrollHeight
+  }
+
+  // 🐨 call useImperativeHandle here with your ref and a callback function
+  // that returns an object with scrollToTop and scrollToBottom
 
   return (
     <div ref={containerRef} role="log">
@@ -22,23 +34,8 @@ function MessagesDisplay({messages}) {
   )
 }
 
-// this is to simulate major computation/big rendering tree/etc.
-function sleep(time = 0) {
-  const wakeUpTime = Date.now() + time
-  while (Date.now() < wakeUpTime) {}
-}
-
-function SlooooowSibling() {
-  // try this with useLayoutEffect as well to see
-  // how it impacts interactivity of the page before updates.
-  React.useEffect(() => {
-    // increase this number to see a more stark difference
-    sleep(300)
-  })
-  return null
-}
-
 function App() {
+  const messageDisplayRef = React.useRef<any>()
   const [messages, setMessages] = React.useState(allMessages.slice(0, 8))
   const addMessage = () =>
     messages.length < allMessages.length
@@ -49,6 +46,9 @@ function App() {
       ? setMessages(allMessages.slice(0, messages.length - 1))
       : null
 
+  const scrollToTop = () => messageDisplayRef.current.scrollToTop()
+  const scrollToBottom = () => messageDisplayRef.current.scrollToBottom()
+
   return (
     <div className="messaging-app">
       <div style={{display: 'flex', justifyContent: 'space-between'}}>
@@ -56,8 +56,17 @@ function App() {
         <button onClick={removeMessage}>remove message</button>
       </div>
       <hr />
-      <MessagesDisplay messages={messages} />
-      <SlooooowSibling />
+      <div>
+        <button onClick={scrollToTop}>scroll to top</button>
+      </div>
+      <MessagesDisplay
+          // @ts-ignore
+          ref={messageDisplayRef}
+          messages={messages}
+      />
+      <div>
+        <button onClick={scrollToBottom}>scroll to bottom</button>
+      </div>
     </div>
   )
 }
