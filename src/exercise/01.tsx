@@ -2,22 +2,40 @@
 // http://localhost:3000/isolated/exercise/01.js
 
 import * as React from 'react'
+import {useReducer} from "react";
+
+type State = {
+    count: number,
+}
+
+type Action = {
+    type: "INCREMENT",
+    step: number,
+}
 
 function Counter({initialCount = 0, step = 1}) {
-  // 🐨 replace React.useState with React.useReducer.
-  // 💰 React.useReducer(countReducer, initialCount)
-  const [count, setCount] = React.useState(initialCount)
+    const [state, dispatch] = useReducer(countReducer, {
+        count: initialCount,
+    })
+    const {count} = state
+    const increment = () => dispatch({type: 'INCREMENT', step})
 
-  // 💰 you can write the countReducer function so you don't have to make any
-  // changes to the next two lines of code! Remember:
-  // The 1st argument is called "state" - the current value of count
-  // The 2nd argument is called "newState" - the value passed to setCount
-  const increment = () => setCount(count + step)
-  return <button onClick={increment}>{count}</button>
+    function countReducer(state: State, action: Action) {
+        const {type, step} = action
+        if (type === 'INCREMENT') {
+            return {
+                ...state,
+                count: state.count + step,
+            }
+        }
+        throw new Error(`Unsupported action type: ${action.type}`)
+    }
+
+    return <button onClick={increment}>{count}</button>
 }
 
 function App() {
-  return <Counter />
+    return <Counter/>
 }
 
 export default App
