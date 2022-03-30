@@ -37,7 +37,7 @@ type Action = {
   error: {message: string},
 };
 
-function asyncReducer(state: State, action: Action): State {
+function responseReducer(state: State, action: Action): State {
   switch (action.type) {
     case 'pending': {
       return {status: 'pending'}
@@ -51,8 +51,8 @@ function asyncReducer(state: State, action: Action): State {
   }
 }
 
-function useAsync(asyncCallback: () => Promise<State>, initialState: State, dependencies: [string]) {
-  const [state, dispatch] = React.useReducer(asyncReducer, {
+function useAsync(asyncCallback: () => Promise<State>, initialState: State): State {
+  const [state, dispatch] = React.useReducer(responseReducer, {
     status: 'idle',
     ...initialState,
   })
@@ -65,9 +65,6 @@ function useAsync(asyncCallback: () => Promise<State>, initialState: State, depe
     dispatch({type: 'pending'})
     promise.then(
         (data) => {
-          if (data.status !== "resolved"){
-            throw new Error("Impossible state");
-          }
           // @ts-ignore
           dispatch({type: 'resolved', data})
         },
@@ -75,34 +72,49 @@ function useAsync(asyncCallback: () => Promise<State>, initialState: State, depe
           dispatch({type: 'rejected', error})
         },
     )
-  }, dependencies)
+  }, [asyncCallback])
 
   return state
 }
 
 function PokemonInfo({pokemonName}) {
-  const state = useAsync(
-      () => {
+  // Define our callback to fetch data from the service iff the name changes.
+  // When the pokemonName changes, `React.useCallback` injects a NEW asyncCallback
+  // function into `useAsync`, triggering the `useEffect` hook inside `useAsync` to
+  // call the service, and dispatch the result to the reducer.
+  // Changes in the output value of the reducer cause this component, its consumer
+  // to rerender.
+  // Typically, a valid name would cause three render cycles, roughly the following flow:
+  // 1. pokemonName changes, so React re-renders this component with the "idle" state.
+  // 2. useCallback sees the new name, and assigns a new function to asyncCallback
+  // 3. This component invokes `useAsync` with the new asyncCallback, running the
+  //    reducer on the current pending state.
+  // 4. async call to service is made in useEffect
+  // 5. reduced state is returned to this component
+  // 6. First render cycle completes.
+  // 7. dispatch of pending state updates state in PokemonInfo, causing second render cycle
+  // 8. asyncCallback hasn't changed, so useEffect doesn't run again.
+  // 9. promise resolves from service call, dispatching the result.
+  // 10. the dispatch triggers the reducer, updating the state in PokemonInfo for the third and final render.
+  const asyncCallback = React.useCallback(() => {
         if (!pokemonName) {
           return
         }
         return fetchPokemon(pokemonName)
-      },
+      }, [pokemonName]);
+  const state = useAsync(
+      asyncCallback,
       {status: pokemonName ? 'pending' : 'idle'},
-      [pokemonName],
   )
 
-  // @ts-ignore
-  const {data: pokemon, status, error} = state
-
-  if (status === 'idle' || !pokemonName) {
+  if (state.status === 'idle' || !pokemonName) {
     return <div>Submit a pokemon</div>
-  } else if (status === 'pending') {
+  } else if (state.status === 'pending') {
     return <PokemonInfoFallback name={pokemonName} />
-  } else if (status === 'rejected') {
-    throw error
-  } else if (status === 'resolved') {
-    return <PokemonDataView pokemon={pokemon} />
+  } else if (state.status === 'rejected') {
+    throw state.error
+  } else if (state.status === 'resolved') {
+    return <PokemonDataView pokemon={state.data} />
   }
 
   throw new Error('This should be impossible')
