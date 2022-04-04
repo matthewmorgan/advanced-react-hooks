@@ -52,18 +52,18 @@ function responseReducer(state: State, action: Action): State {
 }
 
 function useSafeDispatch(dispatch) {
-  const mountedRef = React.useRef(false)
+  const [mountedRef, setMountedRef] = React.useState(false)
   React.useEffect(() => {
-    mountedRef.current = true
-    return () => mountedRef.current = false
+    setMountedRef(false)
+    return () => setMountedRef(false)
   }, [])
 
   return React.useCallback((action) => {
-    if (!mountedRef.current){
+    if (!mountedRef){
       return
     }
     dispatch(action)
-  }, [dispatch])
+  }, [dispatch, mountedRef])
 }
 
 type UseAsync = State & {
