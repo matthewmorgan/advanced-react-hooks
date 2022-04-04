@@ -51,30 +51,46 @@ function responseReducer(state: State, action: Action): State {
   }
 }
 
-function useAsync(asyncCallback: () => Promise<State>, initialState: State): State {
-  const [state, dispatch] = React.useReducer(responseReducer, {
+function useSafeDispatch(dispatch) {
+  const mountedRef = React.useRef(false)
+  React.useEffect(() => {
+    mountedRef.current = true
+    return () => mountedRef.current = false
+  }, [])
+
+  return React.useCallback((action) => {
+    if (!mountedRef.current){
+      return
+    }
+    dispatch(action)
+  }, [dispatch])
+}
+
+type UseAsync = State & {
+  run: (promise:any) => void,
+}
+
+function useAsync(initialState: State): UseAsync {
+  const [state, unsafeDispatch] = React.useReducer(responseReducer, {
     status: 'idle',
     ...initialState,
   })
 
-  React.useEffect(() => {
-    const promise = asyncCallback()
-    if (!promise) {
-      return
-    }
+  const dispatch = useSafeDispatch(unsafeDispatch)
+
+  const run = React.useCallback(promise => {
     dispatch({type: 'pending'})
     promise.then(
         (data) => {
-          // @ts-ignore
           dispatch({type: 'resolved', data})
         },
         error => {
           dispatch({type: 'rejected', error})
         },
     )
-  }, [asyncCallback])
+  }, [dispatch])
 
-  return state
+  return {...state, run}
 }
 
 function PokemonInfo({pokemonName}) {
@@ -96,16 +112,18 @@ function PokemonInfo({pokemonName}) {
   // 8. asyncCallback hasn't changed, so useEffect doesn't run again.
   // 9. promise resolves from service call, dispatching the result.
   // 10. the dispatch triggers the reducer, updating the state in PokemonInfo for the third and final render.
-  const asyncCallback = React.useCallback(() => {
-        if (!pokemonName) {
-          return
-        }
-        return fetchPokemon(pokemonName)
-      }, [pokemonName]);
-  const state = useAsync(
-      asyncCallback,
-      {status: pokemonName ? 'pending' : 'idle'},
-  )
+
+
+  const {run, ...state} = useAsync({
+    status: pokemonName? "pending" : "idle",
+  })
+
+  React.useEffect(() => {
+    if(!pokemonName){
+      return
+    }
+    run(fetchPokemon(pokemonName))
+  }, [pokemonName, run])
 
   if (state.status === 'idle' || !pokemonName) {
     return <div>Submit a pokemon</div>
