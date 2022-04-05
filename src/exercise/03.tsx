@@ -15,23 +15,33 @@ const CountProvider = ({children, ...rest}) => {
     )
 }
 
+const useCount = () => {
+    const context = React.useContext(CountContext)
+    if (!context) {
+        throw new Error("useCount must be used within CountProvider")
+    }
+    return context
+}
+
 function CountDisplay() {
-    const [count] = React.useContext(CountContext)
+    const [count] = useCount()
     return <div>{`The current count is ${count}`}</div>
 }
 
 function Counter() {
-    const [_, setCount] = React.useContext(CountContext)
+    const [_, setCount] = useCount()
     const increment = () => setCount(c => c + 1)
     return <button onClick={increment}>Increment count</button>
 }
 
 function App() {
     return (
-        <CountProvider>
-            <CountDisplay/>
-            <Counter/>
-        </CountProvider>
+        <>
+            <CountProvider>
+                <CountDisplay/>
+                <Counter/>
+            </CountProvider>
+        </>
     )
 }
 
