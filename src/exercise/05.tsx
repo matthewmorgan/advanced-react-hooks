@@ -2,37 +2,49 @@
 // http://localhost:3000/isolated/exercise/05.js
 
 import * as React from 'react'
+import {ForwardedRef} from "react";
 
-// 🐨 wrap this in a React.forwardRef and accept `ref` as the second argument
-function MessagesDisplay({messages}) {
+type Message = {id: number, speaker: string, content: string};
+
+type Props = {
+  messages: Array<Message>,
+};
+
+const MessagesDisplay = React.forwardRef(({messages}: Props, ref: ForwardedRef<unknown>)  => {
   const containerRef = React.useRef()
   React.useLayoutEffect(() => {
     scrollToBottom()
   })
 
-  // 💰 you're gonna want this as part of your imperative methods
-  // function scrollToTop() {
-  //   containerRef.current.scrollTop = 0
-  // }
+  function scrollToTop() {
+    // @ts-ignore
+    containerRef.current.scrollTop = 0
+  }
   function scrollToBottom() {
     // @ts-ignore
     containerRef.current.scrollTop = containerRef.current.scrollHeight
   }
 
-  // 🐨 call useImperativeHandle here with your ref and a callback function
-  // that returns an object with scrollToTop and scrollToBottom
+  // Return value of this callback gets set on the forwarded ref.
+  // So, the ref passed in will now have "scrollToTop" and "scrollToBottom" methods that
+  // are callable in the parent component.
+  React.useImperativeHandle(ref, () => ({
+      scrollToTop,
+      scrollToBottom,
+  }))
 
   return (
-    <div ref={containerRef} role="log">
-      {messages.map((message, index, array) => (
-        <div key={message.id}>
-          <strong>{message.author}</strong>: <span>{message.content}</span>
-          {array.length - 1 === index ? null : <hr />}
-        </div>
-      ))}
-    </div>
+      <div ref={containerRef} role="log">
+        {messages.map((message, index, array) => (
+            <div key={message.id}>
+              <strong>{message.speaker}</strong>: <span>{message.content}</span>
+              {array.length - 1 === index ? null : <hr />}
+            </div>
+        ))}
+      </div>
   )
-}
+});
+
 
 function App() {
   const messageDisplayRef = React.useRef<any>()
@@ -73,7 +85,7 @@ function App() {
 
 export default App
 
-const allMessages = [
+const allMessages: Array<Message> = [
   `Leia: Aren't you a little short to be a stormtrooper?`,
   `Luke: What? Oh... the uniform. I'm Luke Skywalker. I'm here to rescue you.`,
   `Leia: You're who?`,
@@ -105,4 +117,4 @@ const allMessages = [
   `Leia: Don't just stand there. Try to brace it with something.`,
   `Luke: Wait a minute!`,
   `Luke: Threepio! Come in Threepio! Threepio! Where could he be?`,
-].map((m, i) => ({id: i, author: m.split(': ')[0], content: m.split(': ')[1]}))
+].map((m, i) => ({id: i, speaker: m.split(': ')[0], content: m.split(': ')[1]}))
